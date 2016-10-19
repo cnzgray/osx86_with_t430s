@@ -1,0 +1,21 @@
+#############
+#remove BAT1 fix
+into device label BAT1 parent_label EC remove_entry;
+#
+into method label _Q22 replace_content
+begin
+    CLPM ()\n
+    Notify (BAT0, 0x80)
+end;
+#
+into method label _Q4C remove_entry;
+#
+into method label _Q4D remove_entry;
+#
+into method label _Q25 remove_entry;
+#
+into method label BATW remove_entry;
+#
+into_all all code_regex \\_SB.PCI0.LPC.EC.BATW\s\(Arg0\) remove_matched;
+#
+############################## fix 7

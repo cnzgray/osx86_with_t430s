@@ -1,0 +1,591 @@
+########################0000000000 begin
+################### first work
+#
+# 1 remove_DSM fix
+into_all method label _DSM remove_entry;
+# 2 remove_WMI fix
+into_all device label WMI1 remove_entry;
+into_all device label WMI2 remove_entry;
+into_all device label WMI3 remove_entry;
+#3 Rename-PCI0_VID to IGPU  fix 21
+into device label VID parent_label PCI0 set_label begin IGPU end;
+into_all all code_regex PCI0\.VID replaceall_matched begin PCI0.IGPU end;
+#
+#
+#
+################### work over
+########################11111111111
+#
+#
+#DTGP fix
+into method label DTGP remove_entry;
+into definitionblock code_regex . insert
+begin
+Method (DTGP, 5, NotSerialized)\n
+{\n
+    If (LEqual (Arg0, Buffer (0x10)\n
+            {\n
+                /* 0000 */    0xC6, 0xB7, 0xB5, 0xA0, 0x18, 0x13, 0x1C, 0x44, \n
+                /* 0008 */    0xB0, 0xC9, 0xFE, 0x69, 0x5E, 0xAF, 0x94, 0x9B\n
+            }))\n
+    {\n
+        If (LEqual (Arg1, One))\n
+        {\n
+            If (LEqual (Arg2, Zero))\n
+            {\n
+                Store (Buffer (One)\n
+                    {\n
+                        0x03\n
+                    }, Arg4)\n
+                Return (One)\n
+            }\n
+            If (LEqual (Arg2, One))\n
+            {\n
+                Return (One)\n
+            }\n
+        }\n
+    }\n
+    Store (Buffer (One)\n
+        {\n
+            0x00\n
+        }, Arg4)\n
+    Return (Zero)\n
+}
+end;
+#
+#
+########################2222222222
+#
+#
+#audio_HDEF-layout=28
+#Audio fix
+into method label _DSM parent_label HDEF remove_entry;
+into device label HDEF insert
+begin
+Method (_DSM, 4, NotSerialized)////wxw\n
+{\n
+Store (Package ()\n
+{\n
+"AAPL,slot-name", Buffer() { "Built in" },\n
+"device_type", Buffer() { "Audio Controller" },\n
+"layout-id", Buffer() { 0x1c, 0x00, 0x00, 0x00 },\n
+"hda-gfx", Buffer() { "onboard-1" },\n
+"PinConfigurations", Buffer() { },\n
+"built-in", Buffer() { 0x00 },\n
+"codec-id",Buffer (0x04){0x69, 0x02, 0xEC, 0x10}\n
+}, Local0)\n
+DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+Return (Local0)\n
+}
+end;
+#
+#
+########################
+#
+#
+#IGBE fix
+into method label _DSM parent_label IGBE remove_entry;
+into device name_adr 0x00190000 code_regex Name.*_SUN.* remove_matched;
+into device label IGBE insert
+begin
+Method (_DSM, 4, NotSerialized)////wxw\n
+{\n
+Store (Package (0x06)\n
+{\n
+"built-in", Buffer() { 0x00 },\n
+"model", Buffer() { "Intel 82579LM" },\n
+"device_type", Buffer() { "Ethernet" }\n
+}, Local0)\n
+DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+Return (Local0)\n
+}\n
+Name (_SUN, 0x00190000)
+end;
+#
+#
+#########################
+#
+#
+#KBD fix 
+into method label _DSM parent_label KBD remove_entry;
+into device label KBD insert
+begin
+Method (_DSM, 4, NotSerialized)////wxw\n
+{\n
+Store (Package (0x06)\n
+{\n
+"RM,oem-id",\n
+"LENOVO", \n
+"RM,oem-table-id",\n
+"T430",\n
+"AAPL,has-embedded-fn-keys",Buffer (0x04){0x01, 0x00, 0x00, 0x00}\n
+}, Local0)\n
+DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+Return (Local0)\n
+}
+end;
+#
+#
+########################3333333333
+############################## #PNLF fix
+#
+into_all device label PNLF remove_entry;
+into device name_adr 0x00020000 insert
+begin
+Device (PNLF)\n
+{\n
+    // normal PNLF declares (note some of this probably not necessary)\n
+    Name (_ADR, Zero)\n
+    Name (_HID, EisaId ("APP0002"))\n
+    Name (_CID, "backlight")\n
+    Name (_UID, 10)\n
+    Name (_STA, 0x0B)\n
+}\n
+end;
+#
+#
+#
+#######################        #HD4000 fix
+#
+#
+#HD4000 fix
+into method label _DSM parent_adr 0x00020000 remove_entry;
+into device name_adr 0x00020000 insert
+begin
+                Method (_DSM, 4, NotSerialized)/////wxw\n
+                {\n
+                    Store (Package (0x1a)\n
+                    {\n
+                       "AAPL,slot-name",Buffer (0x08){"Slot -1"},\n
+                       "AAPL,HasPanel",\n 
+                        Buffer (0x04){0x01, 0x00, 0x00, 0x00},\n 
+                       "AAPL,Haslid",\n 
+                        Buffer (0x04){0x01, 0x00, 0x00, 0x00},\n 
+                       "AAPL,backlight-control",\n 
+                        Buffer (0x04){0x01, 0x00, 0x00, 0x00},\n 
+                       "@0,backlight-control",\n 
+                        Buffer (0x04){0x01, 0x00, 0x00, 0x00},\n 
+                       "@0,AAPL,boot-display",\n 
+                        Buffer (0x04){0x01, 0x00, 0x00, 0x00},\n 
+                       "@0,built-in", Buffer (One){0x01},\n                       
+                       "built-in",Buffer (One){0x01},\n
+                        "AAPL,ig-platform-id", Buffer (0x04){0x04, 0x00, 0x66, 0x01},\n
+                        "hda-gfx",Buffer (0x0A){"onboard-1"},\n
+                        "model", Buffer (0x17){"Intel HD Graphics 4000"}\n
+                    }, Local0)\n
+                    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+                    Return (Local0)\n
+                }
+end;
+#
+#
+#######################        #HPET fix
+#
+#
+#
+#HPET fix
+#
+#
+into device label HPET parent_label LPC replace_content
+begin
+                
+                    Name (_HID, EisaId ("PNP0103"))\n 
+                    Name (_CID, EisaId ("PNP0C01"))\n 
+                    Method (_STA, 0, NotSerialized)\n 
+                    {\n
+                      Return (0x0F)\n 
+                    }\n 
+                    Name (_CRS, ResourceTemplate ()\n 
+                    {\n
+                        IRQNoFlags ()\n
+                            {0,8,11,15}\n
+                        Memory32Fixed (ReadWrite,\n
+                            0xFED00000,\n        
+                            0x00000400,\n       
+                            )\n
+                    })
+                
+end;
+#
+#
+########################
+#
+#
+#####################################    battery fix
+#battery_Lenovo-T430s and T430
+#1
+into method label B1B2 remove_entry;
+into definitionblock code_regex . insert
+begin
+    Method (B1B2, 2, NotSerialized)//8*2=16\n
+    {\n        
+        Or (ShiftLeft (Arg1, 0x08), Arg0, Local0)\n
+        Return (Local0)\n
+    }\n
+end;
+
+into method label B1B4 remove_entry;
+into definitionblock code_regex . insert
+begin    
+    Method (B1B4, 4, NotSerialized)///8*4=32\n
+    {\n
+        Or (ShiftLeft (Arg1, 0x08), Arg0, Local0)\n
+        Or (ShiftLeft (Arg2, 0x10),Local0, Local0)\n
+        Or (ShiftLeft (Arg3, 0x18),Local0, Local0)\n
+        Return (Local0)\n
+    }\n
+end;
+
+into method label L1L4 remove_entry;
+into definitionblock code_regex . insert
+begin    
+    Method (L1L4, 4, NotSerialized)//32*4=128\n
+    {\n
+        Or (ShiftLeft (Arg1, 0x20), Arg0, Local0)\n
+        Or (ShiftLeft (Arg2, 0x40),Local0, Local0)\n
+        Or (ShiftLeft (Arg3, 0x60),Local0, Local0)\n
+        Return (Local0)\n
+    }\n
+end;
+#2
+# Change EC register declarations from 16-bit to 8-bit
+into device label EC code_regex SBRC,\s+16 replace_matched begin BRC0,8,BRC1,8 end;
+into device label EC code_regex SBFC,\s+16 replace_matched begin BFC0,8,BFC1,8 end;
+into device label EC code_regex SBAC,\s+16 replace_matched begin BAC0,8,BAC1,8 end;
+into device label EC code_regex SBVO,\s+16 replace_matched begin BVO0,8,BVO1,8 end;
+into device label EC code_regex SBBM,\s+16 replace_matched begin BBM0,8,BBM1,8 end;
+into device label EC code_regex SBDC,\s+16 replace_matched begin BDC0,8,BDC1,8 end;
+into device label EC code_regex SBDV,\s+16 replace_matched begin BDV0,8,BDV1,8 end;
+into device label EC code_regex SBSN,\s+16 replace_matched begin BSN0,8,BSN1,8 end;
+#sleep
+into device label EC code_regex HWAK,\s+16 replace_matched begin WAK0,8,WAK1,8 end;
+#sleep end
+#3
+# Change EC register declarations from 32-bit to 8-bit
+into device label EC code_regex SBCH,\s+32 replace_matched begin BCH0,8,BCH1,8,BCH2,8,BCH3,8 end;
+#4
+# Change EC register declarations from 128-bit to 8-bit
+into device label EC code_regex SBMN,\s+128 replace_matched begin 
+BMN0,8,BMN1,8,BMN2,8,BMN3,8,
+BMN4,8,BMN5,8,BMN6,8,BMN7,8,
+BMN8,8,BMN9,8,BMNA,8,BMNB,8,
+BMNC,8,BMND,8,BMNE,8,BMNF,8
+end;
+into device label EC code_regex SBDN,\s+128 replace_matched begin 
+BDN0,8,BDN1,8,BDN2,8,BDN3,8,
+BDN4,8,BDN5,8,BDN6,8,BDN7,8,
+BDN8,8,BDN9,8,BDNA,8,BDNB,8,
+BDNC,8,BDND,8,BDNE,8,BDNF,8
+end;
+#5
+# Change access (reads) to those registers from 16-bit to 8-bit
+into_all method label GBST code_regex SBRC replaceall_matched begin B1B2 (BRC0, BRC1) end;
+into_all method label GBIF code_regex SBFC replaceall_matched begin B1B2 (BFC0, BFC1) end;
+into_all method label GBST code_regex SBAC replaceall_matched begin B1B2 (BAC0, BAC1) end;
+into_all method label GBST code_regex SBVO replaceall_matched begin B1B2 (BVO0, BVO1) end;
+into_all method label GBIF code_regex SBBM replaceall_matched begin B1B2 (BBM0, BBM1) end; 
+into_all method label GBIF code_regex SBDC replaceall_matched begin B1B2 (BDC0, BDC1) end;
+into_all method label GBIF code_regex SBDV replaceall_matched begin B1B2 (BDV0, BDV1) end;
+into_all method label GBIF code_regex SBSN replaceall_matched begin B1B2 (BSN0, BSN1) end;
+##sleep
+into_all method label _L1D code_regex \(\\_SB\.PCI0\.LPC\.EC\.HWAK, replaceall_matched begin (B1B2(\\_SB.PCI0.LPC.EC.WAK0,\\_SB.PCI0.LPC.EC.WAK1), end;
+##sleep end
+#6
+# Change access (reads) to those registers from 32-bit to 8-bit
+into_all method label GBIF code_regex SBCH replaceall_matched begin B1B4(BCH0,BCH1,BCH2,BCH3) end;
+#7
+# Change access (reads) to those registers from 128-bit to 8-bit
+into_all method label GBIF code_regex SBMN, replaceall_matched begin
+\n
+L1L4\n
+(\n
+B1B4(BMN0,BMN1,BMN2,BMN3),\n
+B1B4(BMN4,BMN5,BMN6,BMN7),\n
+B1B4(BMN8,BMN9,BMNA,BMNB),\n
+B1B4(BMNC,BMND,BMNE,BMNF)\n
+), 
+end;
+###############
+into_all method label GBIF code_regex SBDN, replaceall_matched begin
+\n
+L1L4\n
+(\n
+B1B4(BDN0,BDN1,BDN2,BDN3),\n
+B1B4(BDN4,BDN5,BDN6,BDN7),\n
+B1B4(BDN8,BDN9,BDNA,BDNB),\n
+B1B4(BDNC,BDND,BDNE,BDNF)\n
+),
+end;
+####################################################battery END
+#########fix 32
+#  *** remove this line if you have a second battery installed
+into method label _STA parent_label BAT1 replace_content begin Return(0) end;
+########################4444444444  IRQ fix
+#
+#
+# IRQ fix
+into device name_hid PNP0000 code_regex IRQNoFlags\s\(\)\s+\{(\d+)\} remove_matched;
+into device name_hid PNP0100 code_regex IRQNoFlags\s\(\)\s+\{(\d+)\} remove_matched;
+into device name_hid PNP0B00 code_regex IRQNoFlags\s\(\)\s+\{(\d+)\} remove_matched;
+#
+#
+#######################5555555555  rename fix
+#
+#   fix 7
+#USB2.0 rename EHC1 to EH01
+into_all all code_regex EHC1 replaceall_matched begin EH01 end;
+into device label EHC1 set_label begin EH01 end;
+into_all scope label \_SB.PCI0.EHC1.URTH.URMH.PRT5 set_label begin \_SB.PCI0.EH01.URTH.URMH.PRT5 end;
+#USB2.0 rename EHC2 to EH02
+into_all all code_regex EHC2 replaceall_matched begin EH02 end;
+into device label EHC2 set_label begin EH02 end;
+into_all scope label \_SB.PCI0.EHC2.URTH.URMH.PRTC set_label begin \_SB.PCI0.EH02.URTH.URMH.PRTC end;
+#
+#
+#
+#
+###
+######(IGBE,XHCi,EH01,EH02,HDEF）fix Name (_PRW, Package (0x02){0x0D,0})
+###1 IGBE
+into device name_adr 0x00190000 code_regex Name\s+\(_PRW,[\s\S]*\}\) 
+replace_matched
+begin
+/////wxw\n
+Name (_PRW, Package (0x02)\n
+{\n
+     0x0D,\n
+     0x00\n
+}) 
+end;
+###2 XHCI
+into device name_adr 0x00140000 code_regex Name\s+\(_PRW,+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+////wxw\n
+Name (_PRW, Package (0x03)\n
+{\n
+     0x0D,\n
+     0x00,\n
+     \\_SB.PCI0.LPC.EC.PUBS\n
+}) 
+end;
+###3 EHC1
+into device name_adr 0x001D0000 code_regex Name\s+\(_PRW,+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+////wxw\n
+Name (_PRW, Package (0x03)\n
+{\n
+     0x0D,\n
+     0x00,\n
+     \\_SB.PCI0.LPC.EC.PUBS\n
+}) 
+end;
+###4 EHC2
+into device name_adr 0x001A0000 code_regex Name\s+\(_PRW,+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+/////wxw\n
+Name (_PRW, Package (0x03)\n
+{\n
+     0x0D,\n
+     0x00,\n
+     \\_SB.PCI0.LPC.EC.PUBS\n
+}) 
+end;
+###5 HDEF
+into device name_adr 0x001B0000 code_regex Name\s+\(_PRW,[\s\S]*\}\) 
+replace_matched
+begin
+////wxw\n
+Name (_PRW, Package (0x02)\n
+{\n
+     0x0D,\n
+     0x00\n
+}) 
+end;
+#
+#
+#######################6666666666  LPC fix
+#
+#
+# LPC device-id
+#
+into method label _DSM parent_adr 0x001F0000 remove_entry;
+into device name_adr 0x001F0000 insert
+begin
+Method (_DSM, 4, NotSerialized)////wxw\n
+ { Store (Package (0x1c)\n
+    {\n
+        "device-id",Buffer (0x04){0x55, 0x1E, 0x00, 0x00},\n
+        "compatible", Buffer (0x04){"pci8086,1e55"},\n
+        "IOName", Buffer (0x04){"pci8086,1e55"}\n
+
+    },Local0)\n
+    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n    
+    Return (Local0)\n
+ }\n
+end;
+#
+#
+#########################7777777777  sleepLED fix
+# sleepLED fix
+into method label \_WAK code_regex \\_SI._SST\s\(0x01\)*.* remove_matched;
+into method label \_WAK code_regex ([\s\S]*) replace_matched
+begin
+             \\_SI._SST (0x01) /////wxw\n
+%1
+#end;
+#
+#########################8888888888  shut down fix
+##     shut down fix
+#
+into method label \_PTS code_regex ([\s\S]*) replace_matched
+begin
+\n
+//comment  this section is for mode 1(LEqual (Arg0, One))\n
+//comment  this section is for mode Sleep(LEqual (Arg0, 0x03))\n
+//comment this section is for mode Hibernate(LEqual (Arg0, 0x04))\n
+//comment this section is for mode Shutdown(LEqual (Arg0, 0x05))\n
+
+        Scope (\\)\n
+        {\n
+            OperationRegion (SLPR, SystemIO, 0x0430, 0x08)\n            
+            Field (SLPR, ByteAcc, NoLock, Preserve)\n
+            {\n
+                    ,   4,\n
+                SLPE,   1\n
+            }\n
+        }\n
+%1
+end;
+#
+into method label \_PTS code_regex Store\s\(Zero,\sSLPE\) remove_matched;
+into method label \_PTS code_regex Sleep\s\(0x10\) remove_matched;
+into method label \_PTS code_regex (\\AWON\s\(0x05\)\s\n*) replace_matched
+begin
+%1
+Store (Zero, SLPE)\n
+Sleep (0x10)\n
+end;
+#
+#
+#
+#
+
+#######################9999999999  SMbus fix
+#SMBUS fix
+into device label BUS0 parent_adr 0x001F0003 remove_entry;
+into Method label _DSM parent_adr 0x001F0003 remove_entry;
+into device name_adr 0x001F0003 insert
+begin
+                Device (BUS0)////wxw\n
+                {\n
+                    Name (_CID, "smbus")\n
+                    Name (_ADR, Zero)\n
+                    Device (MKY0)\n
+                    {\n
+                        Name (_ADR, Zero)\n
+                        Name (_CID, "mikey")\n
+                    }\n
+                }\n
+                Method (_DSM, 4, NotSerialized)////wxw\n
+                {\n
+                    Store (Package (0x04)\n
+                        {\n
+                            "name",Buffer (0x0D){"pci8086,1e22"},\n 
+                            "device-id",Buffer (0x04){0x22, 0x1e, 0x00, 0x00}\n
+                        
+                         }, Local0)\n
+                    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+                    Return (Local0)\n
+                } 
+end;
+#
+#
+#######################AAAAAAAAAAAAA   SAT1 fix
+# SAT1 fix
+#
+into method label _DSM parent_adr 0x001F0002 remove_entry;
+into device name_adr 0x001F0002 insert
+begin
+                Method (_DSM, 4, NotSerialized)////wxw\n
+                {\n
+                    Store (Package (0x0a)\n
+                    {\n
+                        "device-id",Buffer (0x04){0x03, 0x1e, 0x00, 0x00},\n
+                        "AAPL,slot-name",\n 
+                        "Built In",\n 
+                        "name",\n 
+                        "Intel AHCI Controller",\n
+                        "compatible",\n 
+                        "pci8086,1e03",\n 
+                        "IOName",\n 
+                        "pci8086,1e03"\n
+                    }, Local0)\n
+                    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+                    Return (Local0)\n
+                } 
+end;
+#
+#
+#######################BBBBBBBBBBBBB
+#
+#
+into device label IMEI parent_label PCI0 remove_entry;
+into device label PCI0 insert
+begin
+Device (IMEI)\n
+{\n
+                Name (_ADR, 0x00160000)\n
+                Method (_DSM, 4, NotSerialized)\n
+                {\n
+                    Store (Package (0x04)\n
+                        {\n
+                            "device-id",Buffer (0x04){0x3A, 0x1E, 0x00, 0x00},\n 
+                            "vendor-id",Buffer (0x04){0x86, 0x80, 0x00, 0x00}\n
+                        }, Local0)\n
+                    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+                    Return (Local0)\n
+                }\n
+}\n
+end;
+#
+#
+#
+#################################
+#  FN+F4 fix
+#
+#
+into_all all code_regex (Notify\s\(\\_SB.SLPB,\s0x80\))
+replace_matched
+begin
+////%1
+end;
+#
+#system_LID fix
+#
+into method label _PRW parent_hid PNP0C0D remove_entry;
+#
+#
+#
+#################################
+# _Q14 (Fn+Home,F8) brightness up key
+into method label _Q14 replace_content
+begin
+    Notify(\_SB.PCI0.LPC.KBD, 0x0206)\n
+    Notify(\_SB.PCI0.LPC.KBD, 0x0286)\n
+end;
+#
+# _Q15 (Fn+End,F9) brightness down key
+into method label _Q15 replace_content
+begin
+    Notify(\_SB.PCI0.LPC.KBD, 0x0205)\n
+    Notify(\_SB.PCI0.LPC.KBD, 0x0285)\n
+end;
+#################################  
+#fix count is 94
+######END
+
+
+

@@ -1,0 +1,67 @@
+#############
+#remove PEG fix
+into device label PEG parent_label PCI0 remove_entry;
+#
+into_all all label \_SB.PCI0.PEG.VID remove_entry;
+#
+into all code_regex Name\s\(\\VHCC,\s0x00\) remove_matched;
+#
+#############
+into Method label _INI parent_label \_SB code_regex If\s\(VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+Store (\\SRHE, \\_SB.PCI0.VID.RID)
+end;
+#
+into_all Method label _OSC parent_label PCI0 code_regex (If\s\(LNot\s\(\\VIGD\)\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*)
+removeall_matched;
+#
+into method label _Q16 code_regex If\s\(VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+\\_SB.PCI0.VID.VSWT ()
+end;
+#
+into method label _Q26 code_regex If\s\(\\_SB.PCI0.PEG.*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+remove_matched;
+#
+into method label _Q27 code_regex If\s\(\\_SB.PCI0.PEG.*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+remove_matched;
+#
+into method label _Q2A code_regex If\s\(VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+\\_SB.PCI0.VID.GLIS (0x01)\n
+\\_SB.PCI0.VID.VLOC (0x01)
+end;
+#
+into method label _Q2B code_regex If\s\(VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+\\_SB.PCI0.VID.GLIS (0x00)
+end;
+#
+into method label MHKD code_regex If\s\(VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+\\_SB.PCI0.VID.VLOC (0x00)
+end;
+#
+into method label _Q14 code_regex If\s\(\\VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+Notify (\\_SB.PCI0.VID.LCD0, 0x86)
+end;
+#
+into method label _Q15 code_regex If\s\(\\VIGD\)+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*+\s[\s\S].*
+replace_matched
+begin
+Notify (\\_SB.PCI0.VID.LCD0, 0x87)
+end;
+#
+into method label _L16 replace_content
+begin
+XOr (\_SB.PCI0.LPC.XHPD, 0x01, \_SB.PCI0.LPC.XHPD)
+end;
+
+#################### fix 18
