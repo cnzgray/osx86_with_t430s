@@ -1,0 +1,575 @@
+########################0000000000 begin
+################### del and ADD fix 14
+# 1 remove_WMI fix
+into_all device label WMI1 remove_entry;
+into_all device label WMI2 remove_entry;
+into_all device label WMI3 remove_entry;
+# 2 win fix 10
+into definitionblock code_regex . insert
+begin
+    Name (WXP1, "Windows 2001")\n
+    Method (GET9, 2, NotSerialized)\n
+    {\n
+        CreateByteField (Arg0, Arg1, TCH9)\n
+        Return (TCH9)\n 
+    }\n
+    Method (STR9, 2, NotSerialized)\n
+    {\n
+        Name (STR8, Buffer (0x50) {})\n
+        Name (STR9, Buffer (0x50) {})\n
+        Store (Arg0, STR8)\n
+        Store (Arg1, STR9)\n
+        Store (Zero, Local0)\n
+        Store (One, Local1)\n
+        While (Local1)\n
+        {\n
+            Store (GET9 (STR8, Local0), Local1)\n
+            Store (GET9 (STR9, Local0), Local2)\n
+            If (LNotEqual (Local1, Local2))\n
+            {\n
+                Return (Zero)\n
+            }\n
+            Increment (Local0)\n
+        }\n
+        Return (One)\n
+    }\n
+    Method (OOSI, 1, NotSerialized)\n
+    {\n
+        If (STR9 (WXP1, Arg0))\n
+        {\n
+            Return (One)\n
+        }\n
+        Return (Zero)\n
+    }\n
+end;
+#
+into_all all code_regex CondRefOf\s\(\\_OSI replaceall_matched 
+begin CondRefOf (\\OOSI end;
+#
+into_all all code_regex \\_OSI replaceall_matched begin OOSI end;
+#
+#
+into ThermalZone label THM0 insert
+begin
+            Method (_PSV, 0, NotSerialized)\n
+            {\n
+                Return (\TPSV)\n
+            }\n
+
+            Method (_TC1, 0, NotSerialized)\n
+            {\n
+                Return (\TTC1)\n
+            }\n
+
+            Method (_TC2, 0, NotSerialized)\n
+            {\n
+                Return (\TTC2)\n
+            }\n
+
+            Method (_TSP, 0, NotSerialized)\n
+            {\n
+                Return (\TTSP)\n
+            }\n
+
+            Method (_PSL, 0, NotSerialized)\n
+            {\n
+                If (And (\PPMF, 0x01000000))\n
+                {\n
+                    If (LEqual (\PNHM, 0x000106E0))\n
+                    {\n
+                        Return (Package (0x08)\n
+                        {\n
+                            \_PR.CPU0,\n 
+                            \_PR.CPU1,\n 
+                            \_PR.CPU2,\n 
+                            \_PR.CPU3,\n 
+                            \_PR.CPU4,\n 
+                            \_PR.CPU5,\n
+                            \_PR.CPU6,\n 
+                            \_PR.CPU7\n
+                        })\n
+                    }\n
+                    Else\n
+                    {\n
+                        Return (Package (0x04)\n
+                        {\n
+                            \_PR.CPU0,\n 
+                            \_PR.CPU1,\n 
+                            \_PR.CPU2,\n 
+                            \_PR.CPU3\n
+                        })\n
+                    }\n
+                }\n
+
+                Return (Package (0x01)\n
+                {\n
+                    \_PR.CPU0\n
+                })\n
+            }\n
+
+end;
+#####################################################################fix 14
+#####rename fix
+###################
+# 3 Rename-KBD to PS2K
+into device label KBD parent_label LPC set_label begin PS2K end;
+# 4 rename EHC1 to EH01
+into_all all code_regex EHC1 replaceall_matched begin EH01 end;
+into device label EHC1 set_label begin EH01 end;
+into_all scope label \_SB.PCI0.EHC1.URTH.URMH.PRT5 set_label begin \_SB.PCI0.EH01.URTH.URMH.PRT5 end;
+# 5 EHC2 to EH02
+into_all all code_regex EHC2 replaceall_matched begin EH02 end;
+into device label EHC2 set_label begin EH02 end;
+into_all scope label \_SB.PCI0.EHC2.URTH.URMH.PRTC set_label begin \_SB.PCI0.EH02.URTH.URMH.PRTC end;
+# 6 Replace all instances of AC to ADP1
+into all label AC set_label begin ADP1 end;
+into_all all code_regex \.AC\.\_PSR\s\(\) replaceall_matched begin .ADP1._PSR () end;
+into_all all code_regex \(AC, replaceall_matched begin (ADP1, end;
+# 7 Rename-PCI0_VID to IGPU  fix 21
+into device label VID parent_label PCI0 set_label begin IGPU end;
+into_all all code_regex PCI0\.VID replaceall_matched begin PCI0.IGPU end;
+#
+################### first over
+##################################################################fix 38
+###########battery fix
+#battery_Lenovo-T430s T430 T420 T420s
+#0 mutex fix to 0
+into_all all code_regex Mutex\s\(MDGS,\s0x07\) replaceall_matched 
+begin Mutex (MDGS, 0x00) end;
+into_all all code_regex Mutex\s\(MCPU,\s0x07\) replace_matched 
+begin Mutex (MCPU, 0x00) end;
+into_all all code_regex Mutex\s\(BATM,\s0x07\) replace_matched 
+begin Mutex (BATM, 0x00) end;
+into_all all code_regex Mutex\s\(XDHK,\s0x07\) replace_matched 
+begin Mutex (XDHK, 0x00) end;
+into_all all code_regex Mutex\s\(BFWM,\s0x07\) replace_matched 
+begin Mutex (BFWM, 0x00) end;
+into_all all code_regex Mutex\s\(MSMI,\s0x07\) replace_matched 
+begin Mutex (MSMI, 0x00) end;
+#
+#0  *** remove a second battery installed
+into method label _STA parent_label BAT1 replace_content begin Return(0) end;
+#1
+into definitionblock code_regex . insert
+begin
+    Method (B1B2, 2, NotSerialized)//8*2=16\n
+    {\n        
+        Or (ShiftLeft (Arg1, 0x08), Arg0, Local0)\n
+        Return (Local0)\n
+    }\n
+end;
+#
+into definitionblock code_regex . insert
+begin    
+    Method (B1B4, 4, NotSerialized)///8*4=32\n
+    {\n
+        Or (ShiftLeft (Arg1, 0x08), Arg0, Local0)\n
+        Or (ShiftLeft (Arg2, 0x10),Local0, Local0)\n
+        Or (ShiftLeft (Arg3, 0x18),Local0, Local0)\n
+        Return (Local0)\n
+    }\n
+end;
+#
+into device label EC insert
+begin
+Method (RE1B, 1, NotSerialized)\n
+{\n
+    OperationRegion(ERAM, EmbeddedControl, Arg0, 1)\n
+    Field(ERAM, ByteAcc, NoLock, Preserve) { BYTE, 8 }\n
+    Return(BYTE)\n
+}\n
+Method (RECB, 2, Serialized)\n
+{\n
+    ShiftRight(Arg1, 3, Arg1)\n
+    Name(TEMP, Buffer(Arg1) { })\n
+    Add(Arg0, Arg1, Arg1)\n
+    Store(0, Local0)\n
+    While (LLess(Arg0, Arg1))\n
+    {\n
+        Store(RE1B(Arg0), Index(TEMP, Local0))\n
+        Increment(Arg0)\n
+        Increment(Local0)\n
+    }\n
+    Return(TEMP)\n
+}\n
+Method (RBMN, 0, Serialized)\n 
+{ Return(RECB(0xA0,128)) }\n 
+Method (RBDN, 0, Serialized)\n 
+{ Return(RECB(0xA0,128)) }\n 
+                    Field (ECOR, ByteAcc, NoLock, Preserve)\n
+                    {\n
+                        Offset (0x84),\n 
+                        HFN1,   8,\n 
+                        HFN2,   8\n
+                    }\n
+end;
+#
+#2
+# Change EC register declarations from 16-bit to 8-bit
+into device label EC code_regex SBRC,\s+16 replace_matched begin BRC0,8,BRC1,8 end;
+into device label EC code_regex SBFC,\s+16 replace_matched begin BFC0,8,BFC1,8 end;
+into device label EC code_regex SBAC,\s+16 replace_matched begin BAC0,8,BAC1,8 end;
+into device label EC code_regex SBVO,\s+16 replace_matched begin BVO0,8,BVO1,8 end;
+into device label EC code_regex SBBM,\s+16 replace_matched begin BBM0,8,BBM1,8 end;
+into device label EC code_regex SBDC,\s+16 replace_matched begin BDC0,8,BDC1,8 end;
+into device label EC code_regex SBDV,\s+16 replace_matched begin BDV0,8,BDV1,8 end;
+into device label EC code_regex SBSN,\s+16 replace_matched begin BSN0,8,BSN1,8 end;
+#sleep
+into device label EC code_regex HWAK,\s+16 replace_matched begin WAK0,8,WAK1,8 end;
+#sleep end
+#3
+# Change EC register declarations from 32-bit to 8-bit
+into device label EC code_regex SBCH,\s+32 replace_matched begin BCH0,8,BCH1,8,BCH2,8,BCH3,8 end;
+#4
+into device label EC code_regex (SBMN,)\s+(128) replace_matched begin BMNX,%2,//%1%2 end;
+into device label EC code_regex (SBDN,)\s+(128) replace_matched begin BDNX,%2,//%1%2 end;
+#5
+# Change access (reads) to those registers from 16-bit to 8-bit
+into_all method label GBST code_regex SBRC replaceall_matched begin B1B2 (BRC0, BRC1) end;
+into_all method label GBIF code_regex SBFC replaceall_matched begin B1B2 (BFC0, BFC1) end;
+into_all method label GBST code_regex SBAC replaceall_matched begin B1B2 (BAC0, BAC1) end;
+into_all method label GBST code_regex SBVO replaceall_matched begin B1B2 (BVO0, BVO1) end;
+into_all method label GBIF code_regex SBBM replaceall_matched begin B1B2 (BBM0, BBM1) end; 
+into_all method label GBIF code_regex SBDC replaceall_matched begin B1B2 (BDC0, BDC1) end;
+into_all method label GBIF code_regex SBDV replaceall_matched begin B1B2 (BDV0, BDV1) end;
+into_all method label GBIF code_regex SBSN replaceall_matched begin B1B2 (BSN0, BSN1) end;
+##sleep
+into_all method label _L1D code_regex \(\\_SB\.PCI0\.LPC\.EC\.HWAK, replaceall_matched begin (B1B2(\\_SB.PCI0.LPC.EC.WAK0,\\_SB.PCI0.LPC.EC.WAK1), end;
+##sleep end
+#6
+# Change access (reads) to those registers from 32-bit to 8-bit
+into_all method label GBIF code_regex SBCH replaceall_matched begin B1B4(BCH0,BCH1,BCH2,BCH3) end;
+#7
+into method label GBIF code_regex \(SBMN, replaceall_matched begin (RBMN(), end;
+into method label GBIF code_regex \(SBDN, replaceall_matched begin (RBDN(), end;
+into method label GBIF code_regex While\s\(Local0\)+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].*+[\s\S].* remove_matched;
+###############battery END
+#################################################################fix 40
+#
+#DTGP fix
+into definitionblock code_regex . insert
+begin
+Method (DTGP, 5, NotSerialized)\n
+{\n
+    If (LEqual (Arg0, Buffer (0x10)\n
+            {\n
+                /* 0000 */    0xC6, 0xB7, 0xB5, 0xA0, 0x18, 0x13, 0x1C, 0x44,\n
+                /* 0008 */    0xB0, 0xC9, 0xFE, 0x69, 0x5E, 0xAF, 0x94, 0x9B\n
+            }))\n
+    {\n
+        If (LEqual (Arg1, One))\n
+        {\n
+            If (LEqual (Arg2, Zero))\n
+            {\n
+                Store (Buffer (One){ 0x03 }, Arg4)\n
+                Return (One)\n
+            }\n
+            If (LEqual (Arg2, One))\n
+            {\n
+                Return (One)\n
+            }\n
+        }\n
+    }\n
+    Store (Buffer (One){ 0x00 }, Arg4)\n
+    Return (Zero)\n
+}
+end;
+#
+#
+into device label ADP1 insert
+begin
+Name (_PRW, Package() { 0x18, 0x03 })
+end;
+#######################
+#
+#
+#Audio layout28
+into device label HDEF insert
+begin
+Method (_DSM, 4, NotSerialized)\n
+{\n
+Store (Package ()\n
+{\n
+"hda-gfx", Buffer() { "onboard-1" },\n
+"layout-id", Buffer() { 0x1c, 0x00, 0x00, 0x00 },\n
+"codec-id",Buffer (0x04){0x69, 0x02, 0xEC, 0x10},\n
+"device_type", Buffer() { "Audio Controller" },\n
+"MaximumBootBeepVolume", Buffer() { 0x01 },\n
+"PinConfigurations", Buffer() { }\n
+}, Local0)\n
+DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+Return (Local0)\n
+}\n
+end;
+#
+#
+#######################
+#
+#
+#IGBE fix
+into device label IGBE insert
+begin
+Method (_DSM, 4, NotSerialized)////wxw\n
+{\n
+Store (Package (0x06)\n
+{\n
+"built-in", Buffer() { 0x00 },\n
+"model", Buffer() { "Intel 82579LM" },\n
+"device_type", Buffer() { "Ethernet" }\n
+}, Local0)\n
+DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+Return (Local0)\n
+}\n
+Name (_SUN, 0x02)
+end;
+#
+#
+########################
+#
+#
+#PS2K fix 
+into device label PS2K insert
+begin
+Method (_DSM, 4, NotSerialized)////wxw\n
+{\n
+Store (Package (0x06)\n
+{\n
+"RM,oem-id",\n
+"LENOVO", \n
+"RM,oem-table-id",\n
+"T430",\n
+"AAPL,has-embedded-fn-keys",\n
+Unicode ("\x01")\n
+}, Local0)\n
+DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+Return (Local0)\n
+}
+end;
+#
+#
+#######################
+#
+into device label PCI0 insert
+begin
+Device (IMEI)\n
+{\n
+                Name (_ADR, 0x00160000)\n
+                Method (_DSM, 4, NotSerialized)\n
+                {\n
+                    If (LEqual (Arg2, Zero))\n
+                    {\n
+                        Return (Buffer (One)\n
+                        {0x03})\n
+                    }\n
+                    Return (Package (0x02)\n
+                    {\n
+                        "device-id",\n
+                        Buffer (0x04)\n
+                        {0x3A, 0x1E, 0x00, 0x00}\n
+                    })\n
+                }\n
+}\n
+end;
+#
+into device label PCI0 insert
+begin
+         Device (HDMI)\n
+           {\n
+               Name (_ADR, One)\n 
+               Method (_DSM, 4, NotSerialized)\n
+                {\n
+                    Store (Package (0x1a)\n
+                    {\n                                      
+                      "hda-gfx",Buffer (0x0A){"onboard-1"},\n
+                    }, Local0)\n
+                    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+                    Return (Local0)\n
+                }\n
+            }\n
+end;
+#
+#SMBUS fix
+into device name_adr 0x001F0003 insert
+begin
+                Device (BUS0)\n
+                {\n
+                    Name (_CID, "smbus")\n
+                    Name (_ADR, Zero)\n
+                    Device (MKY0)\n
+                    {\n
+                        Name (_ADR, Zero)\n
+                        Name (_CID, "mikey")\n
+                    }\n
+                }\n
+end;
+#
+#
+#HPEF fix 3
+end;
+into device label HPET code_regex (Name\s\(_HID,*.*)
+replace_matched
+begin
+%1\n
+                    Name (_CID, EisaId ("PNP0C01"))\n
+end;
+into method label _STA parent_label HPET replace_content begin Return(0x0F) end;
+into device label HPET code_regex (Memory32Fixed\s\(ReadOnly,)
+replace_matched
+begin
+IRQNoFlags (){8,11,14,15}\n
+                        %1
+end;
+####
+# IRQ fix
+into device name_hid PNP0000 code_regex IRQNoFlags\s\(\)\s+\{(\d+)\} remove_matched;
+into device name_hid PNP0100 code_regex IRQNoFlags\s\(\)\s+\{(\d+)\} remove_matched;
+into device name_hid PNP0B00 code_regex IRQNoFlags\s\(\)\s+\{(\d+)\} remove_matched;
+#
+######(IGBE,HDEF）fix Name (_PRW, 
+###1 IGBE
+into device name_adr 0x00190000 code_regex Name\s+\(_PRW,[\s\S]*\}\) 
+replace_matched
+begin
+//Name (_PRW, Package (0x02)\n
+//{\n
+//     0x0D,\n
+//     0x04\n
+//}) 
+end;
+###2 HDEF
+into device name_adr 0x001B0000 code_regex Name\s+\(_PRW,[\s\S]*\}\) 
+replace_matched
+begin
+//Name (_PRW, Package (0x02)\n
+//{\n
+//     0x0D,\n
+//     0x04\n
+//}) 
+end;
+#
+#
+##########PNLF fix
+#
+into definitionblock code_regex . insert
+begin
+    Scope (_SB)\n
+    {\n
+Device (PNLF)\n
+{\n
+    Name (_ADR, Zero)\n
+    Name (_HID, EisaId ("APP0002"))\n
+    Name (_CID, "backlight")\n
+    Name (_UID, 10)\n
+    Name (_STA, 0x0B)\n
+}\n
+    }\n
+end;
+#
+#######################
+########################HD4000 fix
+#
+into device name_adr 0x00020000 insert
+begin
+                Method (_DSM, 4, NotSerialized)/////wxw\n
+                {\n
+                    Store (Package (0x1a)\n
+                    {\n
+                       "AAPL,backlight-control",\n 
+                        Buffer (0x04){0x01, 0x00, 0x00, 0x00},\n                       
+                       "built-in",Buffer (One){0x01},\n
+                        "AAPL,ig-platform-id", Buffer (0x04){0x04, 0x00, 0x66, 0x01},\n
+                        "hda-gfx",Buffer (0x0A){"onboard-1"},\n
+                        "model", Buffer (0x17){"Intel HD Graphics 4000"}\n
+                    }, Local0)\n
+                    DTGP (Arg0, Arg1, Arg2, Arg3, RefOf (Local0))\n
+                    Return (Local0)\n
+                }
+end;
+#
+#######################################################################fix 18
+#
+into device label LPC insert
+begin
+         Device (SMCD)\n
+           {\n
+                    Name (_HID, "MON0000")\n
+                    Method (FAN0, 0, NotSerialized)\n
+                    {\n
+                        Store (B1B2 (^^EC.HFN1, ^^EC.HFN2), Local0)\n
+                        Return (Local0)\n
+                    }\n
+
+                    Method (TCPU, 0, NotSerialized)\n
+                    {\n
+                        Store (^^EC.TMP0, Local0)\n
+                        Return (Local0)\n
+                    }\n
+            }\n
+end;
+#####################
+# sleepLED fix
+into method label \_WAK code_regex ([\s\S]*) replace_matched
+begin
+             \\_SI._SST (0x01)\n
+%1
+#end;
+#
+#########################
+##     shut down fix
+#
+into method label \_PTS code_regex ([\s\S]*) replace_matched
+begin
+\n
+        Scope (\\)\n
+        {\n
+            OperationRegion (SLPR, SystemIO, 0x0430, 0x08)\n            
+            Field (SLPR, ByteAcc, NoLock, Preserve)\n
+            {\n
+                    ,   4,\n
+                SLPE,   1\n
+            }\n
+        }\n
+%1
+end;
+#
+into method label \_PTS code_regex (\\AWON\s\(0x05\)\s\n*) replace_matched
+begin
+%1
+Store (Zero, SLPE)\n
+Sleep (0x10)\n
+end;
+#
+#
+################################################################# fix 4
+#
+#
+## other fix
+#################################
+# _Q14 (Fn+Home,F8) brightness up key
+into method label _Q14 replace_content begin
+    Notify(\_SB.PCI0.LPC.PS2K, 0x0206)\n
+    Notify(\_SB.PCI0.LPC.PS2K, 0x0286)\n
+end;
+#
+# _Q15 (Fn+End,F9) brightness down key
+into method label _Q15 replace_content begin
+    Notify(\_SB.PCI0.LPC.PS2K, 0x0205)\n
+    Notify(\_SB.PCI0.LPC.PS2K, 0x0285)\n
+end;
+#################################  
+#fan control:
+#HFSP=0x80,auto
+#HFSP=0x40,max(Thinkvantage)
+#
+into method label _Q19 replace_content
+begin
+                If (LEqual (HFSP, 0x80))\n
+                {Store (0x40, HFSP)}\n              
+                else\n
+                {Store (0x80, HFSP)}\n
+end;
+################################################################### fix 3
+#
+# 
+#fix count is 118
+######END
